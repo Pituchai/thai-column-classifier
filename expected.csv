@@ -1,0 +1,48 @@
+column_name,expected_decision
+เลขบัตรประชาชน,auto_hash
+เลขประจำตัวประชาชน,auto_hash
+บัตรประชาชน,auto_hash
+cid,auto_hash
+citizen_id,auto_hash
+หมายเลขบัตร,auto_hash
+ประชาชน_id,auto_hash
+เลขบัตรประชาขน,auto_hash
+ID,human_review
+card_number,human_review
+เลขที่บัตร,human_review
+personal_number,human_review
+ID_pass,pass
+hospital_id,pass
+department_code,pass
+phone_number,pass
+passport_no,pass
+employee_id,pass
+บัตรเครดิต,pass
+เลขที่,pass
+citizenid,auto_hash
+id_no,human_review
+เลขปชช,auto_hash
+national_id,auto_hash
+random_text,pass
+citizen id,auto_hash
+national id,auto_hash
+id card,auto_hash
+personal id,auto_hash
+citizen identification number,auto_hash
+national identification number,auto_hash
+personal identification number,auto_hash
+เลขบัตร,auto_hash
+รหัสบัตรประชาชน,auto_hash
+หมายเลขบัตรประชาชน,auto_hash
+เลขประจำตัว,auto_hash
+nationalid,auto_hash
+idcard,auto_hash
+เลขบตรประชาชน,auto_hash
+เลขบัตรปชช,auto_hash
+id,human_review
+code,human_review
+key,human_review
+number,human_review
+no,human_review
+identifier,human_review
+record id,human_review

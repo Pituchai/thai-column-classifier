@@ -89,6 +89,9 @@ class ClassifierConfig:
 # Patterns & Normalizer
 # ─────────────────────────────────────────────
 
+
+
+# CID_TERMS เป็นรายการคำที่ใช้บอกว่า “ชื่อนี้น่าจะเป็นคอลัมน์เลขบัตรประชาชน” ใช้สำหรับ exact match และ fuzzy match
 _CID_TERMS = [
     "เลขบัตรประชาชน", "เลขบัตร", "เลขประจำตัวประชาชน", "เลขปชช",
     "รหัสบัตรประชาชน", "บัตรประชาชน", "หมายเลขบัตรประชาชน", "เลขประจำตัว",
@@ -98,16 +101,19 @@ _CID_TERMS = [
     "personal id", "personal identification number",
 ]
 
+# GENERIC_TERMS เป็นรายการคำที่กว้างเกินไป หรือกำกวม ถ้าชื่อคอลัมน์เป็นคำพวกนี้ ถึง semantic score จะสูง ก็อาจไม่ตัดสินเป็น auto_hash ทันที แต่ให้ไป human_review ก่อน
 _GENERIC_TERMS = [
     "id", "code", "key", "number", "no", "identifier", "record id",
 ]
 
+# CID_SEMANTIC_REFERENCES เป็นรายการคำอ้างอิงสำหรับ semantic search ใช้ดูว่า “ความหมาย” ของชื่อคอลัมน์คล้ายกับคำที่เกี่ยวกับเลขบัตรประชาชนไหม ไม่ได้ดูแค่ตัวสะกดใกล้กัน แต่ดูความหมายโดยรวม
 _CID_SEMANTIC_REFERENCES = [
     "เลขบัตรประชาชน", "เลขประจำตัวประชาชน", "หมายเลขบัตรประชาชน",
     "citizen identification number", "national identification number",
     "personal identification number", "thai national id",
 ]
 
+# REPLACEMENTS เป็นตัวแปลงคำก่อนเอาไป match ใช้แก้คำสะกดติดกัน คำย่อ หรือคำพิมพ์ผิดที่พบบ่อย
 _REPLACEMENTS = {
     "citizenid": "citizen id",
     "nationalid": "national id",

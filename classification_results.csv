@@ -1,0 +1,26 @@
+column_name,normalized_name,expected_decision,predicted_decision,passed,reason,confidence,lexical_exact,lexical_exact_term,lexical_fuzzy_score,lexical_fuzzy_term,semantic_score,semantic_term,generic_name_risk,value_pattern_signal,sample_values_count,matched_stage
+เลขบัตรประชาชน,เลขบัตรประชาชน,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,เลขบัตรประชาชน,0.0,,,,False,False,139,lexical_exact
+เลขประจำตัวประชาชน,เลขประจำตัวประชาชน,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,เลขประจำตัวประชาชน,0.0,,,,False,False,129,lexical_exact
+บัตรประชาชน,บัตรประชาชน,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,บัตรประชาชน,0.0,,,,False,False,148,lexical_exact
+cid,cid,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,cid,0.0,,,,False,False,141,lexical_exact
+citizen_id,citizen id,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,citizen id,0.0,,,,False,False,143,lexical_exact
+หมายเลขบัตร,หมายเลขบัตร,auto_hash,auto_hash,True,lexical_fuzzy_match,1.0,False,,100.0,เลขบัตร,,,False,False,141,lexical_fuzzy
+ประชาชน_id,ประชาชน id,auto_hash,pass,False,not_cid,0.686196,False,,82.352941,เลขบัตรประชาชน,0.686196,เลขประจำตัวประชาชน,False,True,140,semantic
+เลขบัตรประชาขน,เลขบัตรประชาขน,auto_hash,auto_hash,True,lexical_fuzzy_match,1.0,False,,100.0,เลขบัตร,,,False,False,148,lexical_fuzzy
+ID,id,human_review,auto_hash,False,lexical_fuzzy_match,1.0,False,,100.0,cid,,,False,False,142,lexical_fuzzy
+card_number,card number,human_review,human_review,True,semantic_mid_confidence,0.810197,False,,77.777778,citizen identification number,0.810197,หมายเลขบัตรประชาชน,False,False,133,semantic
+เลขที่บัตร,เลขที่บัตร,human_review,human_review,True,semantic_mid_confidence,0.873206,False,,82.352941,เลขบัตรประชาชน,0.873206,เลขบัตรประชาชน,False,True,126,semantic
+personal_number,personal number,human_review,human_review,True,lexical_fuzzy_review,0.9,False,,90.0,personal id,,,False,False,136,lexical_fuzzy
+ID_pass,id pass,pass,pass,True,not_cid,0.632102,False,,80.0,cid,0.632102,personal identification number,False,False,142,semantic
+hospital_id,hospital id,pass,pass,True,not_cid,0.516897,False,,80.0,cid,0.516897,personal identification number,False,False,144,semantic
+department_code,department code,pass,pass,True,not_cid,0.430497,False,,66.666667,cid,0.430497,เลขบัตรประชาชน,False,False,151,semantic
+phone_number,phone number,pass,human_review,False,lexical_fuzzy_review,0.857143,False,,85.714286,citizen identification number,,,False,False,152,lexical_fuzzy
+passport_no,passport no,pass,pass,True,not_cid,0.568432,False,,47.058824,personal id,0.568432,citizen identification number,False,False,143,semantic
+employee_id,employee id,pass,pass,True,not_cid,0.570889,False,,80.0,cid,0.570889,personal identification number,False,False,142,semantic
+บัตรเครดิต,บัตรเครดิต,pass,pass,True,not_cid,0.742596,False,,72.727273,เลขบัตร,0.742596,เลขบัตรประชาชน,False,False,148,semantic
+เลขที่,เลขที่,pass,human_review,False,semantic_mid_confidence,0.750674,False,,66.666667,เลขบัตรประชาชน,0.750674,เลขประจำตัวประชาชน,False,False,200,semantic
+citizenid,citizen id,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,citizen id,0.0,,,,False,False,139,lexical_exact
+id_no,id no,human_review,pass,False,not_cid,0.454184,False,,80.0,cid,0.454184,personal identification number,False,False,137,semantic
+เลขปชช,เลขปชช,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,เลขปชช,0.0,,,,False,False,157,lexical_exact
+national_id,national id,auto_hash,auto_hash,True,lexical_exact_match,1.0,True,national id,0.0,,,,False,False,125,lexical_exact
+random_text,random text,pass,pass,True,not_cid,0.255311,False,,40.0,national id,0.255311,เลขบัตรประชาชน,False,False,135,semantic
