@@ -15,11 +15,17 @@ The classifier combines:
 
 ## Project Files
 
-- `column_classifier.py` contains the reusable classifier library
-- `main.py` runs the included CSV-based evaluation
-- `test_data.csv` contains sample column data
-- `expected.csv` defines the expected decision for each test column
-- `classification_results.csv` is the generated evaluation output
+- `classifier/engine.py` core classification pipeline
+- `classifier/models.py` input/output/config dataclasses
+- `classifier/normalize.py` text normalization logic
+- `classifier/registry.py` YAML registry loader
+- `classifier/registry/cid_registry.yaml` CID term registry (CID terms, generic terms, semantic references, replacements)
+- `column_classifier.py` backward-compatible public import entrypoint
+- `main.py` CSV-based evaluation runner
+- `data/test_data.csv` sample column data
+- `data/expected.csv` expected decision per test column
+
+- `first_version/` legacy snapshot for presentation (single-file version)
 
 ## Requirements
 
@@ -42,18 +48,16 @@ If semantic packages are not installed, the classifier falls back to lexical-onl
 
 ## Run The Demo
 
-Run the provided evaluation script:
-
 ```bash
 python3 main.py
 ```
 
 The script will:
 
-- load expected outcomes from `expected.csv`
-- classify every column in `test_data.csv`
+- load expected outcomes from `data/expected.csv`
+- classify every column in `data/test_data.csv`
 - compare predicted decisions with expected decisions
-- write detailed results to `classification_results.csv`
+- print failed cases and summary to terminal
 
 ## Library Usage
 
@@ -103,6 +107,7 @@ classifier = ColumnClassifier(config=config)
 
 ## Notes
 
-- The current heuristic is focused on Thai citizen ID style fields and related English aliases
+- The CID terms are now stored in `classifier/registry/cid_registry.yaml`
+- You can override the registry path with `ClassifierConfig(registry_path="...")`
 - Generic names such as `id` may be routed to `human_review` instead of `auto_hash`
 - Sample values help the guardrail detect likely 13-digit identifier patterns

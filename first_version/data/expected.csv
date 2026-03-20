@@ -1,0 +1,87 @@
+column_name,expected_decision
+เลขบัตรประชาชน,auto_hash
+เลขประจำตัวประชาชน,auto_hash
+บัตรประชาชน,auto_hash
+cid,auto_hash
+citizen_id,auto_hash
+หมายเลขบัตร,auto_hash
+ประชาชน_id,auto_hash
+เลขบัตรประชาขน,auto_hash
+ID,human_review
+card_number,human_review
+เลขที่บัตร,human_review
+personal_number,human_review
+ID_pass,pass
+hospital_id,pass
+department_code,pass
+phone_number,pass
+passport_no,pass
+employee_id,pass
+บัตรเครดิต,pass
+เลขที่,pass
+citizenid,auto_hash
+id_no,human_review
+เลขปชช,auto_hash
+national_id,auto_hash
+random_text,pass
+citizen id,auto_hash
+national id,auto_hash
+id card,auto_hash
+personal id,auto_hash
+citizen identification number,auto_hash
+national identification number,auto_hash
+personal identification number,auto_hash
+เลขบัตร,auto_hash
+รหัสบัตรประชาชน,auto_hash
+หมายเลขบัตรประชาชน,auto_hash
+เลขประจำตัว,auto_hash
+nationalid,auto_hash
+idcard,auto_hash
+เลขบตรประชาชน,auto_hash
+เลขบัตรปชช,auto_hash
+id,human_review
+code,pass
+key,human_review
+number,human_review
+no,human_review
+identifier,human_review
+record id,pass
+เลขบัตรประชาช,auto_hash
+เลขบัตรประชา,auto_hash
+เลขบัตรประชน,auto_hash
+รหัสปชช,auto_hash
+รหัสบัตรปชช,auto_hash
+เลขประจำตัวปชช,auto_hash
+หมายเลขปชช,auto_hash
+ชื่อผู้ป่วย,pass
+หมายเหตุผู้ป่วย,pass
+จังหวัด,pass
+prefix,pass
+first_name,pass
+last_name,pass
+birth_date,pass
+gender,pass
+address_no,pass
+moo,pass
+tambon,pass
+amphoe,pass
+province,pass
+postal_code,pass
+registration_date,pass
+household_id,pass
+คำนำหน้านาม,pass
+ชื่อต้น,pass
+สกุล,pass
+ชื่อสกุล,pass
+วันเดือนปีเกิด,pass
+อายุ,pass
+เพศ,pass
+ที่อยู่ตามทะเบียนบ้าน,pass
+ตำบล,pass
+อำเภอ,pass
+จังหวัดตามทะเบียนบ้าน,pass
+ประเภทความพิการ,pass
+วันออกบัตร,pass
+วันหมดอายุ,pass
+ลักษณะความพิการ,pass
+PERSON_SUBTYPE,pass

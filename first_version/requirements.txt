@@ -1,4 +1,3 @@
 numpy
 rapidfuzz
 huggingface_hub
-pyyaml
