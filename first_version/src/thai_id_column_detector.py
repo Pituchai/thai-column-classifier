@@ -59,9 +59,7 @@ class ClassificationResult:
     semantic_score: Optional[float] = None
     semantic_term: Optional[str] = None
 
-    generic_name_risk: bool = False
     value_pattern_signal: bool = False
-    cid_anchor_signal: bool = False
 
     decision: str = "pass"          # auto_hash | human_review | pass
     reason: str = "not_classified"
@@ -77,8 +75,6 @@ class ClassifierConfig:
 
     semantic_auto_threshold: float = 0.93
     semantic_review_threshold: float = 0.75
-
-    use_value_pattern_guardrail: bool = True
 
     semantic_backend: str = "auto"  # auto | local | hf_api | disabled
     embedding_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -96,24 +92,13 @@ class ClassifierConfig:
 _CID_TERMS = [
     "เลขบัตรประชาชน", "เลขบัตร", "เลขประจำตัวประชาชน", "เลขปชช",
     "รหัสบัตรประชาชน", "รหัสปชช", "รหัสบัตรปชช",
+    "รหัสประจำตัวประชาชน", "รหัสประจำตัว",
     "บัตรประชาชน", "หมายเลขบัตรประชาชน", "เลขประจำตัว", "ประชาชน_id",
+    "เลขที่บัตรประจำตัวประชาชน", "เลขที่บัตรประชาชน",
     "cid", "citizen id", "citizen_id", "citizenid",
     "citizen identification number", "national id", "national_id",
     "national identification number", "id card", "id_card",
     "personal id", "personal identification number",
-]
-
-# GENERIC_TERMS เป็นรายการคำที่กว้างเกินไป หรือกำกวม ถ้าชื่อคอลัมน์เป็นคำพวกนี้ ถึง semantic score จะสูง ก็อาจไม่ตัดสินเป็น auto_hash ทันที แต่ให้ไป human_review ก่อน
-_GENERIC_TERMS = [
-    "id", "key", "number", "no", "identifier",
-    "card number", "card_number", "personal number", "personal_number",
-    "id no", "id_no", "เลขที่บัตร"
-]
-
-# NON_CID_TERMS เป็นรายการคำที่ชัดเจนว่าไม่ใช่เลขบัตรประชาชน เพื่อกัน false positive จาก fuzzy match
-_NON_CID_TERMS = [
-    "phone number", "phone_number", "mobile", "mobile number",
-    "telephone", "tel", "contact number", "contact_number",
 ]
 
 # CID_SEMANTIC_REFERENCES เป็นรายการคำอ้างอิงสำหรับ semantic search ใช้ดูว่า “ความหมาย” ของชื่อคอลัมน์คล้ายกับคำที่เกี่ยวกับเลขบัตรประชาชนไหม ไม่ได้ดูแค่ตัวสะกดใกล้กัน แต่ดูความหมายโดยรวม
@@ -123,12 +108,7 @@ _CID_SEMANTIC_REFERENCES = [
     "personal identification number", "thai national id",
 ]
 
-_CID_ANCHOR_TOKENS = [
-    "ประชาชน", "ปชช", "บัตร", "cid", "citizen", "national",
-    "identification", "personal id", "id card",
-]
-
-# REPLACEMENTS เป็นตัวแปลงคำก่อนเอาไป match ใช้แก้คำสะกดติดกัน คำย่อ หรือคำพิมพ์ผิดที่พบบ่อย
+# REPLACEMENTS เป็นตัวแปลงคำก่อนเอาไป match ใช้แก้คำสะกดติดกัน คำย่อ หรือคำพิมพ์ผิดที่พบบ่อย ใช้สำหรับ normalize ชื่อคอลัมน์ก่อนเอาไปเทียบกับ CID_TERMS และ CID_SEMANTIC_REFERENCES เพื่อเพิ่มโอกาสในการจับคู่ เช่น "citizenid" → "citizen id", "เลขบตรประชาชน" → "เลขบัตรประชาชน"
 _REPLACEMENTS = {
     "citizenid": "citizen id",
     "nationalid": "national id",
@@ -152,6 +132,8 @@ def _normalize(text: str) -> str:
 # ─────────────────────────────────────────────
 # Engine (Lexical + Semantic + Rules + Decision)
 # ─────────────────────────────────────────────
+# name คือค่าที่เราคิดว่าเรากำลังจะทำ auto_hash หรือ human_review หรือ pass กับคอลัมน์นี้อยู่
+# term คือค่าที่เรามีอยู่ในมือแล้ว และอยากจะเทียบกับ name ว่ามันใกล้เคียงกันแค่ไหน
 
 # เทียบ 1:1
 def _exact_match(name: str, terms: List[str]) -> Tuple[bool, Optional[str]]:
@@ -164,70 +146,74 @@ def _exact_match(name: str, terms: List[str]) -> Tuple[bool, Optional[str]]:
 def _fuzzy_match(name: str, terms: List[str]) -> Tuple[float, Optional[str]]:
     best_score, best_term = 0.0, None
     for term in terms:
-        score = max(
+        scores = [
             # เทียบตรง ๆ เหมาะกับ string ยาวเท่ากัน
             fuzz.ratio(name, term),
-            # เช็ค substring เหมาะกับ "ชื่อยาว vs ชื่อสั้น"
-            fuzz.partial_ratio(name, term),
             # เช็ค token order เหมาะกับ "คำสลับตำแหน่ง"
             fuzz.token_sort_ratio(name, term),
-        )
+        ]
+        # ใช้ partial_ratio เฉพาะตอนที่ name ยาวกว่า term เท่านั้น
+        # เพราะ partial_ratio จะเอา string ที่สั้นกว่าไปวิ่งหา match ในทุกตำแหน่งของ string ที่ยาวกว่า
+        # ถ้าไม่เช็ค จะเกิด false positive เช่น "id" match "cid" หรือ "number" match "identification_number"
+        # การเช็คนี้การันตีว่า term เป็น "subset" ที่ถูกค้นหาใน name เสมอ ไม่ใช่กลับกัน
+        if len(name) > len(term):
+            scores.append(fuzz.partial_ratio(name, term))
+        score = max(scores)
         if score > best_score:
             best_score, best_term = float(score), term
     return best_score, best_term
 
 
-# ตรวจสอบ pattern ใน sample values เช่น ถ้ามีค่าในคอลัมน์ที่มีตัวเลข 13 หลักเยอะ ๆ ก็อาจเป็นสัญญาณว่าเป็นเลขบัตรประชาชน ถึงชื่อคอลัมน์จะไม่ชัดเจน
-def _has_13_digit_pattern(samples: List[str], min_ratio: float = 0.7) -> bool:
-    cleaned = [str(v).strip() for v in samples if str(v).strip()]
-    if not cleaned:
+_NULL_STR = {"", "none", "nan", "null", "na", "n/a", "nat", "<na>"}
+
+
+def _thai_cid_checksum(value: str) -> bool:
+    """ตรวจสอบ checksum ของเลขบัตรประชาชนไทย 13 หลัก"""
+    total = sum(int(value[i]) * (13 - i) for i in range(12))
+    return (11 - (total % 11)) % 10 == int(value[12])
+
+
+# ตรวจสอบ pattern ใน sample values — นับเฉพาะค่าที่ไม่ใช่ null, ตรงกับ pattern ตัวเลข 13 หลักพอดี และผ่าน checksum
+def _has_13_digit_pattern(samples: List[str], min_ratio: float = 0.25) -> bool:
+    non_null = [str(v).strip() for v in samples if str(v).strip().lower() not in _NULL_STR]
+    if not non_null:
         return False
-    matched = sum(1 for v in cleaned if len(re.sub(r"\D", "", v)) == 13)
-    return (matched / len(cleaned)) >= min_ratio
+    matched = sum(
+        1 for v in non_null
+        if re.fullmatch(r"\d{13}", re.sub(r"[\s\-]", "", v))
+        and _thai_cid_checksum(re.sub(r"[\s\-]", "", v))
+    )
+    return (matched / len(non_null)) >= min_ratio
 
 
-def _has_cid_anchor(name: str) -> bool:
-    return any(token in name for token in _CID_ANCHOR_TOKENS)
-
-
-# ตัดสินใจขั้นสุดท้ายว่าจะ auto_hash, human_review, หรือ pass โดยดูจากผลการตรวจสอบทุกขั้นตอน และกฎเสริมต่าง ๆ เช่น ถ้า semantic score สูง แต่ชื่อคอลัมน์เป็นคำกว้าง ๆ ก็อาจจะไม่ auto_hash ทันที แต่ให้ human_review ก่อน
+# ตัดสินใจขั้นสุดท้าย: exact/fuzzy → auto_hash หรือ human_review, semantic → auto_hash หรือ human_review, 13-digit guardrail → auto_hash
 def _decide(result: ClassificationResult, config: ClassifierConfig) -> ClassificationResult:
+    # exact match
     if result.lexical_exact:
         result.decision, result.reason, result.confidence = "auto_hash", "lexical_exact_match", 1.0
         return result
 
+    # fuzzy match
     if result.lexical_fuzzy_score >= config.fuzzy_auto_threshold:
         result.decision = "auto_hash"
         result.reason = "lexical_fuzzy_match"
         result.confidence = result.lexical_fuzzy_score / 100.0
         return result
 
-    if result.lexical_fuzzy_score >= config.fuzzy_review_threshold:
-        result.decision = "human_review"
-        result.reason = "lexical_fuzzy_review"
-        result.confidence = result.lexical_fuzzy_score / 100.0
-        return result
-
+    # semantic search
     if result.semantic_score is not None:
         if result.semantic_score >= config.semantic_auto_threshold:
-            if result.generic_name_risk and not result.value_pattern_signal:
-                result.decision = "human_review"
-                result.reason = "semantic_high_but_generic_name"
-            else:
-                result.decision = "auto_hash"
-                result.reason = "semantic_high_confidence"
+            result.decision = "auto_hash"
+            result.reason = "semantic_high_confidence"
             result.confidence = result.semantic_score
             return result
 
-        if result.semantic_score >= config.semantic_review_threshold:
-            if result.cid_anchor_signal or result.value_pattern_signal:
-                result.decision = "human_review"
-                result.reason = "semantic_mid_confidence"
-            else:
-                result.decision = "pass"
-                result.reason = "semantic_low_signal_name"
-            result.confidence = result.semantic_score
-            return result
+    # value pattern
+    if result.value_pattern_signal:
+        result.decision = "auto_hash"
+        result.reason = "value_pattern_13digit"
+        result.confidence = 1.0
+        return result
 
     result.decision = "pass"
     result.reason = "not_cid"
@@ -247,8 +233,6 @@ class ColumnClassifier:
         self.config = config or ClassifierConfig()
 
         self._cid_terms = [_normalize(x) for x in _CID_TERMS]
-        self._generic_terms = [_normalize(x) for x in _GENERIC_TERMS]
-        self._non_cid_terms = [_normalize(x) for x in _NON_CID_TERMS]
         self._semantic_refs = [_normalize(x) for x in _CID_SEMANTIC_REFERENCES]
 
         self._model = None
@@ -331,21 +315,6 @@ class ColumnClassifier:
         name = _normalize(column.column_name)
         result = ClassificationResult(column_name=column.column_name, normalized_name=name)
 
-        if name in self._non_cid_terms:
-            result.decision = "pass"
-            result.reason = "explicit_non_cid"
-            result.confidence = 1.0
-            result.metadata["matched_stage"] = "explicit_non_cid"
-            return result
-
-        if name in self._generic_terms:
-            result.generic_name_risk = True
-            result.decision = "human_review"
-            result.reason = "generic_ambiguous_name"
-            result.confidence = 1.0
-            result.metadata["matched_stage"] = "generic_name_guardrail"
-            return result
-
         # Stage 1 — Exact
         exact, exact_term = _exact_match(name, self._cid_terms)
         result.lexical_exact, result.lexical_exact_term = exact, exact_term
@@ -356,18 +325,12 @@ class ColumnClassifier:
         # Stage 2 — Fuzzy
         fuzzy_score, fuzzy_term = _fuzzy_match(name, self._cid_terms)
         result.lexical_fuzzy_score, result.lexical_fuzzy_term = fuzzy_score, fuzzy_term
-        if fuzzy_score >= self.config.fuzzy_review_threshold:
-            result.metadata["matched_stage"] = "lexical_fuzzy"
-            return _decide(result, self.config)
-
         # Stage 3 — Semantic
         sem_score, sem_term = self._semantic_score(name)
         result.semantic_score, result.semantic_term = sem_score, sem_term
 
-        # Stage 4 — Guardrails
-        result.generic_name_risk = name in self._generic_terms
+        # Stage 4 — Guardrail
         result.value_pattern_signal = _has_13_digit_pattern(column.sample_values)
-        result.cid_anchor_signal = _has_cid_anchor(name)
 
         result.metadata.update({
             "matched_stage": "semantic",

@@ -1,0 +1,15 @@
+column_name,expected_decision
+cid,auto_hash
+prefix,pass
+first_name,masking
+last_name,masking
+birth_date,pass
+gender,pass
+address_no,partial_masking
+moo,masking
+tambon,pass
+amphoe,pass
+province,pass
+postal_code,pass
+registration_date,pass
+household_id,pass

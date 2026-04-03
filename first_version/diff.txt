@@ -1,0 +1,21 @@
+1. เป้าหมายต่างกัน
+โปรเจกต์เรา	chayasin repo
+ตรวจจับอะไร	เลขบัตรประชาชน อย่างเดียว	ชื่อ, นามสกุล, CID ฯลฯ หลายประเภท
+output	auto_hash / human_review / pass	canonical name เช่น FIRSTNAME, CID
+2. Stage 4 ต่างกันโดยสิ้นเชิง
+โปรเจกต์เรา ใช้ Value Pattern Guardrail — ดูตัวเลข 13 หลัก + checksum จริง ๆ ในข้อมูล เพื่อยืนยันว่าเป็นเลขบัตรจริง
+
+chayasin ใช้ LLM (Ollama) — ส่งชื่อคอลัมน์ + sample values ให้ AI ตัดสิน
+
+3. เราดูค่าจริงในข้อมูล เขาไม่ดู (ยกเว้น Compound Name)
+โปรเจกต์เราตรวจ checksum ของตัวเลขในข้อมูลจริง ซึ่งแม่นยำมากสำหรับ CID แต่ chayasin ดูแค่ชื่อคอลัมน์เป็นหลักตลอด pipeline
+
+4. เราไม่มี LLM fallback
+chayasin มี LLM เป็น last resort สำหรับกรณีที่ exact/fuzzy/semantic ยังตอบไม่ได้ โปรเจกต์เราหยุดที่ semantic แล้วใช้ value pattern แทน
+
+5. Fuzzy ของเราซับซ้อนกว่า
+เราใช้ 3 วิธีรวมกัน (ratio + token_sort_ratio + partial_ratio) และมี logic ควบคุม partial_ratio ว่าใช้เฉพาะตอน len(name) > len(term) เพื่อป้องกัน false positive เช่น "id" match "cid"
+
+chayasin ใช้แค่ WRatio ตัวเดียว
+
+สรุป: โปรเจกต์เราเชี่ยวชาญเรื่อง CID โดยเฉพาะ และใช้ value-level validation เป็นจุดแข็ง ส่วน chayasin ครอบคลุมหลายประเภทมากกว่าแต่ไม่ได้ตรวจค่าจริงในข้อมูลลึกเท่าเรา

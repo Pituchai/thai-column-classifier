@@ -1,0 +1,31 @@
+column_name,expected_decision
+ชื่อ-นามสกุล,masking
+fullname,masking
+PERSON_NAME,masking
+ชื่อ-สกุล ผู้สูงอายุ,masking
+คำนำหน้า,masking
+prefix,masking
+title,masking
+TITLE_DESC,masking
+ชื่อ,masking
+fname,masking
+first_name,masking
+FIRSTNAME,masking
+GiveName,masking
+ชื่อ ผู้กู้,masking
+นามสกุล,masking
+lname,masking
+last_name,masking
+LASTNAME,masking
+FamilyName,masking
+นามสกุล ผู้กู้,masking
+อีเมล,masking
+email,masking
+e_mail,masking
+จังหวัด,pass
+อำเภอ,pass
+ตำบล,pass
+อายุ,pass
+เพศ,pass
+hospital_id,pass
+random_text,pass

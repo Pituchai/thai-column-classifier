@@ -1,59 +1,89 @@
-import csv
-from column_classifier import ColumnClassifier, ColumnInput
+import os
+import pandas as pd
+from dotenv import load_dotenv
+load_dotenv()
+# both id and sensitive detectors need to be run in the same script to ensure the correct order of execution and to allow the sensitive detector to only run on columns that pass the CID check.
+from src.thai_id_column_detector import ColumnClassifier as CIDClassifier, ColumnInput as CIDInput
+from src.thai_sensitive_column_detector import SensitiveColumnClassifier, ColumnInput as SensitiveInput, OpenAIProvider
 
-clf = ColumnClassifier()
+cid_clf = CIDClassifier()
+sensitive_clf = SensitiveColumnClassifier(
+    llm_provider=OpenAIProvider(),
+)
 
-# โหลด expected
-with open("data/expected.csv", encoding="utf-8-sig") as f:
-    expected = {row["column_name"]: row["expected_decision"] for row in csv.DictReader(f)}
 
-# โหลด test_data และ classify แต่ละ column
+def load_file(path: str) -> pd.DataFrame:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".csv":
+        return pd.read_csv(path, encoding="utf-8-sig", dtype=str, on_bad_lines="skip", engine="python")
+    elif ext in (".xlsx", ".xls"):
+        return pd.read_excel(path, dtype=str)
+    else:
+        raise ValueError(f"Unsupported file format: {ext}")
+
+
+def classify_column(col_name: str, samples: list) -> dict:
+    # CID detector runs first
+    cid_result = cid_clf.classify(CIDInput(column_name=col_name, sample_values=samples))
+    if cid_result.decision != "pass":
+        return {
+            "decision": cid_result.decision,
+            "type": "CID",
+            "reason": cid_result.reason,
+            "confidence": round(cid_result.confidence, 3),
+            "detector": "cid",
+        }
+
+    # Sensitive detector runs if CID says pass
+    sensitive_result = sensitive_clf.classify(SensitiveInput(column_name=col_name, sample_values=samples))
+    return {
+        "decision": sensitive_result.decision,
+        "type": sensitive_result.sensitive_type,
+        "reason": sensitive_result.reason,
+        "confidence": round(sensitive_result.confidence, 3),
+        "detector": "sensitive",
+    }
+
+
+# ── Load data ─────────────────────────────────────────────────────────────────
+DATA_PATH = "data/test_csv_5/test_data.csv"
+EXPECTED_PATH = "data/test_csv_5/expected.csv"
+
+expected_df = load_file(EXPECTED_PATH)
+expected = dict(zip(expected_df["column_name"], expected_df["expected_decision"]))
+
+df = load_file(DATA_PATH)
+
 passed, passed_cases, failed = 0, [], []
 
-with open("data/test_data.csv", encoding="utf-8-sig") as f:
-    reader = csv.DictReader(f)
-    fieldnames = reader.fieldnames or []
-    rows = list(reader)
+for col_name in df.columns.tolist():
+    samples = df[col_name].dropna().astype(str).str.strip()
+    samples = samples[samples != ""].tolist()
 
-for col_name in fieldnames:
-    samples = []
-    for row in rows:
-        value = row.get(col_name) or ""
-        value = value.strip()
-        if value:
-            samples.append(value)
-    result = clf.classify(ColumnInput(column_name=col_name, sample_values=samples))
+    if col_name not in expected:
+        continue
 
-    if result.decision == expected[col_name]:
+    result = classify_column(col_name, samples)
+
+    if result["decision"] == expected[col_name]:
         passed += 1
-        passed_cases.append({
-            "column": col_name,
-            "decision": result.decision,
-            "reason": result.reason,
-            "confidence": round(result.confidence, 3),
-        })
+        passed_cases.append({"column": col_name, **result})
     else:
-        failed.append({
-            "column": col_name,
-            "expected": expected[col_name],
-            "got": result.decision,
-            "reason": result.reason,
-            "confidence": round(result.confidence, 3),
-        })
+        failed.append({"column": col_name, "expected": expected[col_name], **result})
 
-# Summary
-print(f"\n{'='*60}")
+# ── Summary ───────────────────────────────────────────────────────────────────
+print(f"\n{'='*70}")
 print(f"RESULT : {passed}/{passed + len(failed)} passed")
-print(f"{'='*60}")
+print(f"{'='*70}")
 
 if passed_cases:
-    print("\nPASSED CASES:")
-    for case in passed_cases:
-        print(f"  ✓ {case['column']:<30} decision={case['decision']:<15} reason={case['reason']} conf={case['confidence']}")
+    print("\nPASSED:")
+    for c in passed_cases:
+        print(f"  ✓ {c['column']:<35} decision={c['decision']:<15} type={str(c['type']):<12} reason={c['reason']:<30} detector={c['detector']} conf={c['confidence']}")
 
 if failed:
-    print("\nFAILED CASES:")
+    print("\nFAILED:")
     for f in failed:
-        print(f"  ✗ {f['column']:<30} expected={f['expected']:<15} got={f['got']:<15} reason={f['reason']} conf={f['confidence']}")
+        print(f"  ✗ {f['column']:<35} expected={f['expected']:<15} got={f['decision']:<15} type={str(f['type']):<12} reason={f['reason']:<30} detector={f['detector']} conf={f['confidence']}")
 else:
     print("\n✓ All test cases passed!")
