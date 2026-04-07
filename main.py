@@ -3,12 +3,12 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 # both id and sensitive detectors need to be run in the same script to ensure the correct order of execution and to allow the sensitive detector to only run on columns that pass the CID check.
-from src.thai_id_column_detector import ColumnClassifier as CIDClassifier, ColumnInput as CIDInput
-from src.thai_sensitive_column_detector import SensitiveColumnClassifier, ColumnInput as SensitiveInput, OpenAIProvider
+from src.thai_id_column_detector import IDColumnClassifier as CIDClassifier, ColumnInput as CIDInput
+from src.thai_sensitive_column_detector import SensitiveColumnClassifier, ColumnInput as SensitiveInput, OllamaProvider
 
 cid_clf = CIDClassifier()
 sensitive_clf = SensitiveColumnClassifier(
-    llm_provider=OpenAIProvider(),
+    llm_provider=OllamaProvider(model="llama3.2"),
 )
 
 

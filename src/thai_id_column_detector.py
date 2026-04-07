@@ -4,9 +4,9 @@ column_classifier.py
 Single-file library for classifying sensitive columns (CID / เลขบัตรประชาชน).
 
 Usage:
-    from column_classifier import ColumnClassifier, ColumnInput, ClassifierConfig
+    from column_classifier import IDColumnClassifier, ColumnInput, ClassifierConfig
 
-    clf = ColumnClassifier()
+    clf = IDColumnClassifier()
     result = clf.classify(ColumnInput(column_name="เลขบัตรประชาชน", sample_values=["1101700203451"]))
     print(result.decision)   # auto_hash | human_review | pass
 """
@@ -225,7 +225,7 @@ def _decide(result: ClassificationResult, config: ClassifierConfig) -> Classific
 # Public API
 # ─────────────────────────────────────────────
 
-class ColumnClassifier:
+class IDColumnClassifier:
     def __init__(self, config: ClassifierConfig | None = None):
         if load_dotenv is not None:
             load_dotenv()

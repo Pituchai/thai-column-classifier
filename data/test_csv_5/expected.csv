@@ -5,7 +5,7 @@ first_name,masking
 last_name,masking
 birth_date,pass
 gender,pass
-address_no,partial_masking
+address_no,masking
 moo,masking
 tambon,pass
 amphoe,pass

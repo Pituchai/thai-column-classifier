@@ -1,8 +1,8 @@
 import os
 import pandas as pd
-from src.thai_id_column_detector import ColumnClassifier, ColumnInput
+from src.thai_id_column_detector import IDColumnClassifier, ColumnInput
 
-clf = ColumnClassifier()
+clf = IDColumnClassifier()
 
 
 def load_file(path: str) -> pd.DataFrame:

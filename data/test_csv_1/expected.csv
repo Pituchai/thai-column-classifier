@@ -52,12 +52,12 @@ record id,pass
 ชื่อผู้ป่วย,masking
 หมายเหตุผู้ป่วย,pass
 จังหวัด,pass
-prefix,masking
+prefix,pass
 first_name,masking
 last_name,masking
 birth_date,pass
 gender,pass
-address_no,partial_masking
+address_no,masking
 moo,masking
 tambon,pass
 amphoe,pass
@@ -65,7 +65,7 @@ province,pass
 postal_code,pass
 registration_date,pass
 household_id,pass
-คำนำหน้านาม,masking
+คำนำหน้านาม,pass
 ชื่อต้น,masking
 สกุล,masking
 ชื่อสกุล,masking

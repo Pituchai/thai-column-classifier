@@ -136,7 +136,7 @@ _SENSITIVE_CATEGORIES: Dict[str, Dict[str, Any]] = {
             "title_id", "title_desc", "name title",
             "personnametitletextth",
         ],
-        "decision": "masking",
+        "decision": "pass",
     },
     "FIRSTNAME": {
         "terms": [
@@ -172,6 +172,7 @@ _SENSITIVE_CATEGORIES: Dict[str, Dict[str, Any]] = {
         "terms": [
             "บ้านเลขที่", "เลขที่บ้าน", "เลขที่", "หมู่ที่", "หมู่", "ซอย", "ถนน",
             "house no", "house number", "houseno", "housenumber",
+            "address no", "address number",
             "street", "street no", "street number", "street address",
             "road", "moo", "soi", "alley",
         ],

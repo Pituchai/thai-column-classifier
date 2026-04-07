@@ -3,10 +3,10 @@ column_name,expected_decision
 fullname,masking
 PERSON_NAME,masking
 ชื่อ-สกุล ผู้สูงอายุ,masking
-คำนำหน้า,masking
-prefix,masking
-title,masking
-TITLE_DESC,masking
+คำนำหน้า,pass
+prefix,pass
+title,pass
+TITLE_DESC,pass
 ชื่อ,masking
 fname,masking
 first_name,masking
