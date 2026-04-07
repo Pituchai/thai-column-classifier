@@ -226,9 +226,3 @@ python main.py
 - ควรจะมี sample data ที่ให้ LLM ไปดูตรงนี้แทน ป้องกันการ leak data ส่งไปให้ cloud ai โดย API
 - ตรง category ของ prefix พวก PREFIX ,คำนำหน้าชื่อ
 ,คำนำหน้าคำนำหน้านามคำนำหน้าชื่อ, prefixtitletitle_id, name ,title → masking (****)
-- llm ควรดูเนื้อหน้าตาเป็นหลัก, ชื่อเป็นรองเสริม
-- ทำเป็น local model ห้ามใช้ openAI
-- ถ้าเหลือเวลาทำรวม หรือ chain column ส่ง column ที่ hash ไปบอก sensitive ว่าไม่ต้องทำ column นี้แล้ว
-- fuzzy เทียบข้ามกันได้ไหม, check score เดียวกันไหม
-- check flatten ใน sector
-- guardrail ได้ใช้ sample data ไหม ถ้าใช้ ใช้ data อะไร

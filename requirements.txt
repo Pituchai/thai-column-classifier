@@ -1,4 +1,14 @@
 numpy
 rapidfuzz
+pandas
+openpyxl
 huggingface_hub
-pyyaml
+python-dotenv
+
+# optional — semantic stage
+sentence-transformers
+
+# optional — llm providers (install only what you use)
+openai
+anthropic
+ollama

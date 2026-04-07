@@ -1,113 +1,100 @@
-# Column Classification POC
+# Thai Column Classifier
 
-Proof of concept for classifying dataset columns that may contain Thai citizen ID data and routing them to one of three decisions:
+A Python library for detecting and classifying sensitive columns in Thai datasets, designed to support PDPA (Personal Data Protection Act) compliance.
 
-- `auto_hash`
-- `human_review`
-- `pass`
+## Features
 
-The classifier combines:
+- **CID detection** — identifies Thai national ID (`เลขบัตรประชาชน`) columns via exact match, fuzzy match, semantic similarity, and LLM fallback
+- **Sensitive column detection** — classifies columns as `FULLNAME`, `PREFIX`, `FIRSTNAME`, `LASTNAME`, `EMAIL`, `ADDRESS_SHORT`, or `ADDRESS_FULL`
+- **Pluggable LLM providers** — OpenAI, Claude, Ollama, HuggingFace
+- **Pluggable semantic providers** — local `sentence-transformers` or HuggingFace Inference API
 
-- exact lexical matching
-- fuzzy lexical matching
-- optional semantic similarity
-- simple value-pattern guardrails for 13-digit identifiers
+## Detection pipeline
 
-## Project Files
+Each column goes through up to 4 stages (stops early if confident):
 
-- `classifier/engine.py` core classification pipeline
-- `classifier/models.py` input/output/config dataclasses
-- `classifier/normalize.py` text normalization logic
-- `classifier/registry.py` YAML registry loader
-- `classifier/registry/cid_registry.yaml` CID term registry (CID terms, generic terms, semantic references, replacements)
-- `column_classifier.py` backward-compatible public import entrypoint
-- `main.py` CSV-based evaluation runner
-- `data/test_data.csv` sample column data
-- `data/expected.csv` expected decision per test column
+1. **Exact match** — keyword list
+2. **Fuzzy match** — `rapidfuzz` ratio / partial_ratio / token_sort_ratio
+3. **Semantic** — embedding cosine similarity
+4. **LLM** — prompt-based classification as final fallback
 
-- `first_version/` legacy snapshot for presentation (single-file version)
+## Output decisions
 
-## Requirements
+| Detector | Decision | Meaning |
+|---|---|---|
+| CID | `auto_hash` | Column is a Thai national ID — hash it |
+| CID | `human_review` | Likely a CID — needs manual review |
+| Sensitive | `masking` | Mask the entire value |
+| Sensitive | `partial_masking` | Mask street-level part only |
+| Both | `pass` | Not sensitive |
 
-- Python 3.10+
-- packages from `requirements.txt`
-
-Install dependencies:
+## Installation
 
 ```bash
-python3 -m pip install -r requirements.txt
+pip install git+https://github.com/<your-username>/column_classification_poc.git
 ```
 
-Optional packages for semantic matching:
+### Dependencies
 
 ```bash
-python3 -m pip install sentence-transformers python-dotenv
+pip install -r requirements.txt
 ```
 
-If semantic packages are not installed, the classifier falls back to lexical-only behavior when possible.
-
-## Run The Demo
+Optional — install only the providers you need:
 
 ```bash
-python3 main.py
+pip install openai        # OpenAI LLM provider
+pip install anthropic     # Claude LLM provider
+pip install ollama        # Ollama LLM provider
+pip install sentence-transformers  # local semantic provider
 ```
 
-The script will:
-
-- load expected outcomes from `data/expected.csv`
-- classify every column in `data/test_data.csv`
-- compare predicted decisions with expected decisions
-- print failed cases and summary to terminal
-
-## Library Usage
+## Quick start
 
 ```python
-from column_classifier import ColumnClassifier, ColumnInput
+from src.thai_id_column_detector import ColumnClassifier, ColumnInput
+from src.thai_sensitive_column_detector import SensitiveColumnClassifier, ColumnInput as SensitiveInput, OpenAIProvider
 
-classifier = ColumnClassifier()
+# CID detector
+cid_clf = ColumnClassifier()
+result = cid_clf.classify(ColumnInput(
+    column_name="เลขบัตรประชาชน",
+    sample_values=["1101700203451"]
+))
+print(result.decision)  # auto_hash
 
-result = classifier.classify(
-    ColumnInput(
-        column_name="เลขบัตรประชาชน",
-        sample_values=["1101700203451", "3101200198765"],
-    )
-)
-
-print(result.decision)
-print(result.reason)
-print(result.confidence)
+# Sensitive column detector
+sensitive_clf = SensitiveColumnClassifier(llm_provider=OpenAIProvider())
+result = sensitive_clf.classify(SensitiveInput(
+    column_name="ชื่อ-นามสกุล",
+    sample_values=["สมชาย ใจดี"]
+))
+print(result.decision)  # masking
 ```
 
-## Decisions
+## Environment variables
 
-- `auto_hash`: high-confidence sensitive column, safe to process automatically
-- `human_review`: uncertain or generic column name that should be checked manually
-- `pass`: not classified as a citizen ID column
-
-## Semantic Backend Options
-
-`ClassifierConfig.semantic_backend` supports:
-
-- `auto` tries local embeddings first, then Hugging Face API if configured
-- `local` requires `sentence-transformers`
-- `hf_api` requires `huggingface_hub` plus `HF_TOKEN` or `HUGGINGFACEHUB_API_TOKEN`
-- `disabled` turns off semantic scoring
-
-Example:
-
-```python
-from column_classifier import ColumnClassifier, ClassifierConfig
-
-config = ClassifierConfig(
-    semantic_backend="disabled",
-)
-
-classifier = ColumnClassifier(config=config)
+```bash
+OPENAI_API_KEY=sk-...
+HF_TOKEN=hf_...        # for HuggingFace providers
 ```
 
-## Notes
+## Running tests
 
-- The CID terms are now stored in `classifier/registry/cid_registry.yaml`
-- You can override the registry path with `ClassifierConfig(registry_path="...")`
-- Generic names such as `id` may be routed to `human_review` instead of `auto_hash`
-- Sample values help the guardrail detect likely 13-digit identifier patterns
+```bash
+python test_check_id.py
+python test_check_sensitive.py
+```
+
+## Project structure
+
+```
+.
+├── src/
+│   ├── thai_id_column_detector.py       # CID classifier
+│   └── thai_sensitive_column_detector.py # Sensitive column classifier
+├── data/                                 # Test datasets
+├── main.py                               # Example runner
+├── test_check_id.py
+└── test_check_sensitive.py
+```
