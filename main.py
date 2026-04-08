@@ -19,14 +19,14 @@ def load_file(path: str) -> pd.DataFrame:
 
 
 # ── Load data ─────────────────────────────────────────────────────────────────
-DATA_PATH = "data/test_csv_4/test_data.csv"
-EXPECTED_PATH = "data/test_csv_4/expected.csv"
+DATA_PATH = "data/test_csv_11/test_data.csv"
+EXPECTED_PATH = "data/test_csv_11/expected.csv"
 
 expected_df = load_file(EXPECTED_PATH)
 expected = dict(zip(expected_df["column_name"], expected_df["expected_decision"]))
 
 df = load_file(DATA_PATH)
-results = clf.classify_dataframe(df)
+results = clf.classify_dataframe(df, show_progress=True)
 
 passed, passed_cases, failed = 0, [], []
 

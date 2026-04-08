@@ -26,6 +26,12 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
+try:
+    from tqdm import tqdm as _tqdm
+except ImportError:
+    _tqdm = None
+
+
 from .thai_id_column_detector import (
     IDColumnClassifier,
     ColumnInput as _IDInput,
@@ -47,7 +53,7 @@ class ColumnResult:
     """auto_hash | human_review | masking | partial_masking | pass"""
 
     type: Optional[str] = None
-    """CID | FULLNAME | FIRSTNAME | LASTNAME | PREFIX | EMAIL | ADDRESS_SHORT | ADDRESS_FULL | None"""
+    """CID | FULLNAME | FIRSTNAME | LASTNAME | PREFIX | EMAIL | ADDRESS_SHORT | ADDRESS_FULL | GEO | None"""
 
     reason: str = ""
     confidence: float = 0.0
@@ -130,19 +136,28 @@ class ThaiColumnClassifier:
         self,
         df: pd.DataFrame,
         sample_size: int = 20,
+        show_progress: bool = False,
     ) -> Dict[str, ColumnResult]:
         """
         Classify all columns in a DataFrame.
 
         Args:
-            df:          Input DataFrame.
-            sample_size: Number of non-null sample values to pull per column (default 20).
+            df:            Input DataFrame.
+            sample_size:   Number of non-null sample values to pull per column (default 20).
+            show_progress: Show a tqdm progress bar (requires tqdm installed).
 
         Returns:
             Dict mapping column_name -> ColumnResult.
         """
+        if show_progress:
+            if _tqdm is None:
+                raise ImportError("pip install tqdm")
+            columns = _tqdm(df.columns.tolist(), desc="Classifying columns", unit="col")
+        else:
+            columns = df.columns
+
         results: Dict[str, ColumnResult] = {}
-        for col in df.columns:
+        for col in columns:
             samples = (
                 df[col]
                 .dropna()

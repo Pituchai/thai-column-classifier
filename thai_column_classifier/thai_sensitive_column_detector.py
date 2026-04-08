@@ -8,6 +8,7 @@ Sensitive types:
     EMAIL                                  → masking
     ADDRESS_SHORT (house no, soi, road)    → masking
     ADDRESS_FULL  (full address column)    → partial_masking
+    GEO           (lat/lon, ละติจูด/ลองจิจูด) → masking
 
 Output decisions:
     masking         — mask entire value (****)
@@ -90,7 +91,7 @@ class SensitiveClassificationResult:
     column_name: str
     normalized_name: str
 
-    sensitive_type: Optional[str] = None       # FULLNAME | PREFIX | FIRSTNAME | LASTNAME | EMAIL | ADDRESS_SHORT | ADDRESS_FULL
+    sensitive_type: Optional[str] = None       # FULLNAME | PREFIX | FIRSTNAME | LASTNAME | EMAIL | ADDRESS_SHORT | ADDRESS_FULL | GEO
 
     lexical_exact: bool = False
     lexical_exact_term: Optional[str] = None
@@ -170,7 +171,7 @@ _SENSITIVE_CATEGORIES: Dict[str, Dict[str, Any]] = {
     },
     "ADDRESS_SHORT": {
         "terms": [
-            "บ้านเลขที่", "เลขที่บ้าน", "เลขที่", "หมู่ที่", "หมู่", "ซอย", "ถนน",
+            "บ้านเลขที่", "เลขที่บ้าน", "เลขที่", "หมู่ที่", "หมู่บ้าน", "หมู่บ้าน ชุมชน", "ชุมชน", "ซอย", "ถนน",
             "house no", "house number", "houseno", "housenumber",
             "address no", "address number",
             "street", "street no", "street number", "street address",
@@ -187,6 +188,14 @@ _SENSITIVE_CATEGORIES: Dict[str, Dict[str, Any]] = {
             "addr", "address1", "address2",
         ],
         "decision": "partial_masking",
+    },
+    "GEO": {
+        "terms": [
+            "ละติจูด", "ลองจิจูด", "พิกัด",
+            "lat", "lon", "latitude", "longitude",
+            "lat lon", "latitude longitude",
+        ],
+        "decision": "masking",
     },
 }
 
@@ -251,7 +260,10 @@ def _fuzzy_match(name: str, terms: List[str]) -> Tuple[float, Optional[str]]:
         # ใช้ partial_ratio เฉพาะตอนที่ name ยาวกว่า term เท่านั้น
         # เพราะ partial_ratio จะเอา term ไปวิ่งหา match ในทุกตำแหน่งของ name
         # การันตีว่า term เป็น "subset" ที่ถูกค้นหาใน name เสมอ ไม่ใช่กลับกัน
-        if len(name) > len(term):
+        # เพิ่มเงื่อนไข coverage >= 0.6 เพื่อป้องกัน false positive
+        # เช่น "ที่อยู่" (7 chars) ใน "ลักษณะที่อยู่อาศัย" (19 chars) = 0.37 → ไม่ใช้ partial_ratio
+        coverage = len(term) / len(name)
+        if len(name) > len(term) and coverage >= 0.6:
             scores.append(fuzz.partial_ratio(name, term))
         score = max(scores)
         if score > best_score:
@@ -316,6 +328,7 @@ _SEMANTIC_REFERENCES = {
     "EMAIL":          "อีเมล email address e-mail electronic mail",
     "ADDRESS_SHORT":  "บ้านเลขที่ ซอย ถนน หมู่ที่ house number street road soi moo alley",
     "ADDRESS_FULL":   "ที่อยู่ ที่อยู่เต็ม ที่อยู่ปัจจุบัน full address home address mailing address residential address",
+    "GEO":            "ละติจูด ลองจิจูด พิกัด latitude longitude lat lon geographic coordinates",
 }
 
 
@@ -388,25 +401,39 @@ Sensitive types:
 - EMAIL          : email address
 - ADDRESS_SHORT  : specific street-level field (บ้านเลขที่, ซอย, ถนน, house number, street, road, soi)
 - ADDRESS_FULL   : full address column (ที่อยู่, address, home address, mailing address)
+- GEO            : geographic coordinates (ละติจูด, ลองจิจูด, พิกัด, lat, lon, latitude, longitude)
 
 Decisions:
-- masking         : mask entire value (FULLNAME, PREFIX, FIRSTNAME, LASTNAME, EMAIL, ADDRESS_SHORT)
+- masking         : mask entire value (FULLNAME, FIRSTNAME, LASTNAME, EMAIL, ADDRESS_SHORT, GEO)
 - partial_masking : mask street-level part only, keep district/province (ADDRESS_FULL), ตั้งแต่ตำบลขึ้นไปยังสามารถเก็บไว้ได้
-- pass            : not sensitive
+- pass            : not sensitive — including PREFIX (คำนำหน้า/title like นาย/นาง/นางสาว/Mr/Mrs are public, not sensitive)
 
 Thai language notes (common false positives):
 - ถ้าเป็นบ้านเลขที่ จะมีต้อง / อย่างเช่น "เลขที่ 123/45" หรือ "บ้านเลขที่ 123 หมู่ 5" — ถ้าไม่มีตัวเลขหรือมีแค่เลขอย่างเดียว ให้พิจารณาว่าเป็น pass
-- "ที่" alone = ordinal marker / row index (ที่ 1, ที่ 2) — NOT an address, decide pass, 
-- "ชื่อ" in compound words like "ชื่อโรงเรียน", "ชื่อสถานที่" = name of a place/organization — NOT a person name, decide pass
+- "ที่" alone = ordinal marker / row index (ที่ 1, ที่ 2) — NOT an address, decide pass
+- "ชื่อ" in compound words like "ชื่อโรงเรียน", "ชื่อสถานที่", "ชื่อสสว." = name of a place/organization — NOT a person name, decide pass
 - Always use sample values to confirm: numeric-only values (1, 2, 3) strongly indicate index/sequence columns
-- "ตำบล" in column can be pass, since it concerned as a non-sensitive data.
+- ตำบล, แขวง, อำเภอ, เขต, จังหวัด, district, province = public geographic administrative units — NOT FULLNAME, NOT sensitive — decide pass
 - postal_code, zip_code, รหัสไปรษณีย์ — these are public geographic data (same as province/district), decide pass
 - birth_date, date_of_birth, วันเกิด, วันเดือนปีเกิด and similar date columns are NOT sensitive — decide pass
+- FULLNAME applies ONLY when the column value is a person's actual name string (e.g. "สมชาย ใจดี"). Columns describing personal attributes are NOT FULLNAME — decide pass:
+  * gender/เพศ, nationality/สัญชาติ/เชื้อชาติ, occupation/อาชีพ, religion/ศาสนา
+  * disease/โรคประจำตัว, disability/ความพิการ, health condition/สุขภาพ
+  * welfare program/สวัสดิการด้าน*, social problem/ปัญหาด้าน*, target group/กลุ่มเป้าหมาย
+  * any column whose values are categories, codes, or yes/no flags — NOT a person name
+  * organization/agency name: "หน่วยงาน", "องค์กร", "บริษัท" = name of a place/org — NOT a person name, decide pass
+- สัญชาติ, สัญชาติอื่น, เชื้อชาติ, nationality, ethnicity — categorical value (Thai/ไทย, American, etc.) — NOT a person name, NOT PREFIX — decide pass
+- "ปัญหาด้าน*" columns (ปัญหาด้านสุขภาพ, ปัญหาด้านครอบครัว, ปัญหาด้านความรุนแรง, etc.) — categorical yes/no or descriptive problem flags, NOT a person name — decide pass
+- pipe-separated values (e.g. "เบาหวาน|ความดัน|โรคหัวใจ") = multi-select categorical field — NOT a person name, NOT FULLNAME — decide pass
+- รหัสประจำบ้าน, house code, รหัสบ้าน = reference code/ID assigned to a house (not a street address field) — decide pass
+- columns starting with "ลักษณะ" (ลักษณะที่อยู่อาศัย, ลักษณะครอบครัว, ลักษณะความพิการ, etc.) = characteristic/attribute type columns whose values are categories (e.g. เช่า/ซื้อ/อื่นๆ) — NOT an address field, NOT FULLNAME — decide pass
+- "cm", "CM" in column names = Case Manager (social worker role code), NOT an email address — do NOT classify as EMAIL
+- columns starting with "รหัส" (รหัส cm, รหัสครัวเรือน, รหัสประจำบ้าน, etc.) = reference code or ID field, NOT personal data — decide pass 
 
 
 Respond with JSON only, no extra text:
 {
-  "sensitive_type": "<FULLNAME|PREFIX|FIRSTNAME|LASTNAME|EMAIL|ADDRESS_SHORT|ADDRESS_FULL|null>",
+  "sensitive_type": "<FULLNAME|PREFIX|FIRSTNAME|LASTNAME|EMAIL|ADDRESS_SHORT|ADDRESS_FULL|GEO|null>",
   "decision": "<masking|partial_masking|pass>",
   "confidence": <0.0 to 1.0>,
   "reason": "<brief explanation in English>"
@@ -601,7 +628,7 @@ class SensitiveColumnClassifier:
         # แสดงว่า fuzzy ไม่มั่นใจพอ — ปล่อยให้ semantic/LLM จัดการแทน
         fuzzy_clear_winner = (
             runner_up_score < self.fuzzy_threshold
-            or abs(best_score - runner_up_score) > 10
+            or abs(best_score - runner_up_score) > 20
         )
         
         if best_score >= self.fuzzy_threshold and best_cat and fuzzy_clear_winner:
@@ -636,8 +663,12 @@ class SensitiveColumnClassifier:
                 llm_reason = llm_result.get("reason", "")
 
                 if llm_decision in ("masking", "partial_masking") and llm_type and llm_confidence >= self.llm_threshold:
-                    result.sensitive_type = llm_type
-                    result.decision = llm_decision
+                    # ใช้ canonical decision จาก term list เสมอ ถ้า type นั้นรู้จัก
+                    # LLM ระบุ type ได้ดี แต่ decision ให้ใช้ของเราเป็น source of truth
+                    canonical_decision = self._categories.get(llm_type, {}).get("decision")
+                    effective_decision = canonical_decision if canonical_decision is not None else llm_decision
+                    result.sensitive_type = llm_type if effective_decision != "pass" else None
+                    result.decision = effective_decision
                     result.reason = f"llm_match: {llm_reason}"
                     result.confidence = llm_confidence
                     result.metadata["matched_stage"] = "llm"

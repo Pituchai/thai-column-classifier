@@ -83,6 +83,20 @@ column_name + sample_values
 | Semantic | เข้าใจความหมาย ข้ามภาษาได้ | ต้องโหลด model (~500MB) |
 | LLM | จับ edge case ได้ดี ใช้ sample values ประกอบ | ช้าที่สุด, ต้องรัน Ollama local |
 
+### Fuzzy Match — เงื่อนไข partial_ratio
+
+`partial_ratio` จะถูกใช้ก็ต่อเมื่อ term **ครอบคลุม >= 60%** ของความยาว column name เท่านั้น
+
+**เหตุผล:** `partial_ratio` เอา term สั้นไปวิ่งหาใน string ยาว ถ้า term เป็นแค่ส่วนเล็กๆ ของชื่อคอลัมน์ จะเกิด false positive ได้ เช่น:
+
+| column name | term | coverage | ใช้ partial_ratio? |
+|---|---|---|---|
+| `ลักษณะที่อยู่อาศัย` | `ที่อยู่` | 7/19 = 0.37 | ❌ ไม่ใช้ → ส่งต่อ LLM → `pass` |
+| `ที่อยู่ปัจจุบัน` | `ที่อยู่` | 7/15 = 0.47 | ❌ ไม่ใช้ → ส่งต่อ LLM → `partial_masking` |
+| `ที่อยู่เต็ม` | `ที่อยู่` | 7/11 = 0.64 | ✅ ใช้ → fuzzy hit → `partial_masking` |
+
+> **กรณี false positive ที่พบ:** คอลัมน์ `ลักษณะที่อยู่อาศัย` (ค่าคือ เช่า / ที่ดินกรรมสิทธิ์ / อื่นๆ) ถูก classify เป็น `partial_masking` เพราะ `"ที่อยู่"` ปรากฏเป็น substring ให้ partial_ratio ยิงคะแนน ~100
+
 ## LLM Providers
 
 ```python

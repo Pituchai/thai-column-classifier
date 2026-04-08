@@ -71,10 +71,7 @@ class ClassificationResult:
 @dataclass
 class ClassifierConfig:
     fuzzy_auto_threshold: float = 92.0
-    fuzzy_review_threshold: float = 85.0
-
     semantic_auto_threshold: float = 0.93
-    semantic_review_threshold: float = 0.75
 
     semantic_backend: str = "local"  # auto | local | hf_api | disabled
     embedding_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"

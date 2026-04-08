@@ -138,6 +138,46 @@ python test_check_sensitive.py
 python main.py
 ```
 
+## Thresholds
+
+### CID Classifier (`IDColumnClassifier`)
+
+Configured via `ClassifierConfig`:
+
+| Stage | Parameter | Default | Trigger |
+|---|---|---|---|
+| Fuzzy | `fuzzy_auto_threshold` | `92.0` | `>= 92` → `auto_hash` |
+| Semantic | `semantic_auto_threshold` | `0.93` (cosine) | `>= 0.93` → `auto_hash` |
+| Value Pattern | `min_ratio` | `0.25` | >= 25% of samples match 13-digit checksum → `auto_hash` |
+
+Fuzzy scoring uses `max(ratio, token_sort_ratio)` always, plus `partial_ratio` only when `len(name) > len(term)` to avoid false positives.
+
+### Sensitive Classifier (`SensitiveColumnClassifier`)
+
+Configured via constructor arguments:
+
+| Stage | Parameter | Default | Trigger |
+|---|---|---|---|
+| Fuzzy | `fuzzy_threshold` | `92.0` | `>= 92` → sensitive decision |
+| Fuzzy tie-break | hard-coded gap | `20 pts` | if runner-up also `>= 92` and gap `< 20` → fall through to semantic |
+| Semantic | `semantic_threshold` | `0.85` (cosine) | `>= 0.85` → sensitive decision |
+| LLM | `llm_threshold` | `0.7` | LLM confidence `>= 0.7` and decision is `masking`/`partial_masking` → accept |
+| Value Pattern (email) | `min_ratio` | `0.25` | >= 25% of samples match email regex → `masking` |
+| Value Pattern (address) | `min_ratio` | `0.25` | >= 25% of samples have 4+ tokens + address keywords → `partial_masking` |
+
+`partial_ratio` is additionally guarded by `coverage = len(term)/len(name) >= 0.6` to prevent short terms from false-matching inside long unrelated column names.
+
+### Side-by-side
+
+| Threshold | CID | Sensitive |
+|---|---|---|
+| Fuzzy | `92.0` | `92.0` |
+| Semantic | `0.93` | `0.85` |
+| LLM confidence | — | `0.7` |
+| Value pattern ratio | `0.25` | `0.25` |
+| Partial ratio coverage guard | none | `0.6` |
+| Fuzzy tie-break gap | — | `20 pts` |
+
 ## Project structure
 
 ```

@@ -4,6 +4,7 @@ pandas
 openpyxl
 huggingface_hub
 python-dotenv
+tqdm
 
 # optional — semantic stage
 sentence-transformers
