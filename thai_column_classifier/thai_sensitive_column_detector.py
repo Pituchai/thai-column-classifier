@@ -399,7 +399,9 @@ Thai language notes (common false positives):
 - "ที่" alone = ordinal marker / row index (ที่ 1, ที่ 2) — NOT an address, decide pass, 
 - "ชื่อ" in compound words like "ชื่อโรงเรียน", "ชื่อสถานที่" = name of a place/organization — NOT a person name, decide pass
 - Always use sample values to confirm: numeric-only values (1, 2, 3) strongly indicate index/sequence columns
-- "ตำบล" in column can be pass, since it concerned as a non-sensitive data. 
+- "ตำบล" in column can be pass, since it concerned as a non-sensitive data.
+- postal_code, zip_code, รหัสไปรษณีย์ — these are public geographic data (same as province/district), decide pass
+- birth_date, date_of_birth, วันเกิด, วันเดือนปีเกิด and similar date columns are NOT sensitive — decide pass
 
 
 Respond with JSON only, no extra text:
@@ -535,20 +537,22 @@ class SensitiveColumnClassifier:
         llm_threshold: float = 0.7,
         semantic_provider=None,
         llm_provider=None,
+        embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
     ):
         """
         Args:
             fuzzy_threshold:    minimum fuzzy score (0-100) to classify as sensitive
             semantic_threshold: minimum cosine similarity (0-1) to classify as sensitive
             llm_threshold:      minimum LLM confidence (0-1) to classify as sensitive
-            semantic_provider:  LocalSemanticProvider | HFSemanticProvider | None (skip stage 3)
-            llm_provider:       OpenAIProvider | OllamaProvider | ClaudeProvider | HFLLMProvider | None (skip stage 4)
+            semantic_provider:  LocalSemanticProvider | HFSemanticProvider | None (uses LocalSemanticProvider with embedding_model)
+            llm_provider:       OpenAIProvider | OllamaProvider | ClaudeProvider | HFLLMProvider | None (uses OllamaProvider with llama3.2)
+            embedding_model:    model name for LocalSemanticProvider when semantic_provider is None
         """
         self.fuzzy_threshold = fuzzy_threshold
         self.semantic_threshold = semantic_threshold
         self.llm_threshold = llm_threshold
-        self.semantic_provider = semantic_provider
-        self.llm_provider = llm_provider
+        self.semantic_provider = semantic_provider if semantic_provider is not None else LocalSemanticProvider(embedding_model)
+        self.llm_provider = llm_provider if llm_provider is not None else OllamaProvider()
 
         # normalize term lists once at init
         self._categories: Dict[str, Dict[str, Any]] = {

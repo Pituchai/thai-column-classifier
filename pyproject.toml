@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "thai-column-classifier"
+version = "0.1.1"
+description = "Classify and detect sensitive columns in Thai datasets (CID, PDPA)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Pituchai Mitpakdee" },
+    { name = "Pantawat Promchart" },
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+    "Intended Audience :: Developers",
+]
+dependencies = [
+    "numpy",
+    "rapidfuzz",
+    "pandas",
+    "openpyxl",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers", "huggingface_hub"]
+openai = ["openai"]
+ollama = ["ollama"]
+claude = ["anthropic"]
+hf = ["huggingface_hub"]
+all = [
+    "sentence-transformers",
+    "huggingface_hub",
+    "openai",
+    "ollama",
+    "anthropic",
+]
+
+[project.urls]
+Repository = "https://github.com/Pituchai/thai-column-classifier"
+
+[tool.setuptools.packages.find]
+include = ["thai_column_classifier*"]

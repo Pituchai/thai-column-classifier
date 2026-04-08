@@ -3,10 +3,10 @@ import pandas as pd
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.thai_sensitive_column_detector import SensitiveColumnClassifier, ColumnInput, OpenAIProvider
+from thai_column_classifier import SensitiveColumnClassifier, SensitiveColumnInput as ColumnInput, OllamaProvider
 
 clf = SensitiveColumnClassifier(
-    llm_provider=OpenAIProvider(),
+    llm_provider=OllamaProvider(model="llama3.2"),
 )
 
 

@@ -1,9 +1,0 @@
-column_name,expected_decision
-ที่,pass
-เลขบัตรประชาชน,auto_hash
-สถานะการศึกษา,pass
-การศึกษาล่าสุด,pass
-โรงเรียน,pass
-ประเภทสถานศึกษา,pass
-ประเภทความพิการ,pass
-ประเภทด้อยโอกาส,pass

@@ -76,7 +76,7 @@ class ClassifierConfig:
     semantic_auto_threshold: float = 0.93
     semantic_review_threshold: float = 0.75
 
-    semantic_backend: str = "auto"  # auto | local | hf_api | disabled
+    semantic_backend: str = "local"  # auto | local | hf_api | disabled
     embedding_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     hf_api_provider: str = "hf-inference"
     hf_api_token: Optional[str] = None

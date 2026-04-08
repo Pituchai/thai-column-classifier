@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from src.thai_id_column_detector import IDColumnClassifier, ColumnInput
+from thai_column_classifier import IDColumnClassifier, IDColumnInput as ColumnInput
 
 clf = IDColumnClassifier()
 

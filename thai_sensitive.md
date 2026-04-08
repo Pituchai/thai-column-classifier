@@ -1,78 +1,52 @@
-# Column Classification POC — Project Overview
+# Thai Sensitive Column Detector
 
-โปรเจกต์นี้ตรวจจับและจำแนกคอลัมน์ข้อมูลอ่อนไหวในไฟล์ CSV/Excel โดยเน้นบริบทข้อมูลไทย
+ตรวจจับคอลัมน์ข้อมูลอ่อนไหวในบริบทข้อมูลไทย (PDPA)
 
-## โครงสร้างไฟล์
+## ผลลัพธ์
 
-```
-first_version/
-├── src/
-│   ├── thai_id_column_detector.py        # ตรวจจับคอลัมน์เลขบัตรประชาชนไทย
-│   └── thai_sensitive_column_detector.py # ตรวจจับคอลัมน์ข้อมูลอ่อนไหวทั่วไป (อยู่ระหว่างพัฒนา)
-├── main.py                               # รันชุดทดสอบ
-├── requirements.txt
-└── data/
-    ├── test_csv_1/
-    │   ├── test_data.csv
-    │   └── expected.csv
-    └── test_csv_2/
-```
+- `masking` — mask ทั้งค่า → `****`
+- `partial_masking` — mask เฉพาะส่วนที่อยู่ระดับถนนลงไป เก็บตำบล/อำเภอ/จังหวัดไว้
+- `pass` — ไม่ใช่ข้อมูลอ่อนไหว
 
-## Detectors
+## Sensitive Types
 
-### thai_id_column_detector.py
-ตรวจจับคอลัมน์เลขบัตรประชาชนไทย (Thai national ID / CID)
+| Sensitive Type | Output | ตัวอย่าง alias |
+|---|---|---|
+| FULLNAME | masking | ชื่อ-นามสกุล, full name, PERSON_NAME |
+| PREFIX | pass | คำนำหน้า, title, prefix |
+| FIRSTNAME | masking | ชื่อ, fname, first_name, GiveName |
+| LASTNAME | masking | นามสกุล, lname, last_name, FamilyName |
+| EMAIL | masking | อีเมล, email, e_mail |
+| ADDRESS_SHORT | masking | บ้านเลขที่, ซอย, ถนน, address no, moo |
+| ADDRESS_FULL | partial_masking | ที่อยู่, address, home address |
 
-ผลลัพธ์:
-- `auto_hash` — มั่นใจสูง ควร hash อัตโนมัติ
-
-- `pass` — ไม่ใช่คอลัมน์เลขบัตรประชาชน
-
-### thai_sensitive_column_detector.py
-ตรวจจับคอลัมน์ข้อมูลอ่อนไหวทั่วไป ได้แก่ ชื่อ, นามสกุล, อีเมล, ที่อยู่, โซเชียลมีเดีย
-
-ผลลัพธ์:
-- `masking` — ข้อมูลละเอียดอ่อน ควร mask ทั้งหมด
-- `partial_masking` — ข้อมูลละเอียดอ่อนบางส่วน เช่น ที่อยู่ยาว mask เฉพาะระดับต่ำกว่าตำบล
-- `pass` — ไม่ใช่ข้อมูลละเอียดอ่อน
-
-> อยู่ระหว่างพัฒนา
-
----
-
-## Sensitive Column Types
-
-| ลำดับ | กลุ่ม | Sensitive Type | Output |
-|---|---|---|---|
-| 1 | ชื่อ | FULLNAME, PREFIX, FIRSTNAME, LASTNAME | masking |
-| 2 | อีเมล | EMAIL | masking |
-| 3 | ที่อยู่สั้น | บ้านเลขที่, หมู่ที่, ซอย, ถนน ฯลฯ | masking |
-| | | ตำบล, อำเภอ, จังหวัด ฯลฯ | pass |
-| 4 | ที่อยู่ยาว | FULL_ADDRESS | partial_masking |
-| 5 | โซเชียลมีเดีย | LINE, FACEBOOK, INSTAGRAM ฯลฯ | masking |
-
-### ตัวอย่าง alias แต่ละกลุ่ม
-
-**FULLNAME:** ชื่อ-นามสกุล, ชื่อ-สกุล, ชื่อสกุล, PERSON_NAME, RGT_NAME, FullName, NAME, NAMETHAI
-
-**PREFIX:** คำนำหน้า, คำนำหน้านาม, คำนำหน้าชื่อ, TITLE_ID, TITLE_DESC, Prefix, title
-
-**FIRSTNAME:** ชื่อ, ชื่อต้น, FNAME, FIRST_NAME, GiveName, encrypted_name, PersonFirstNameTH
-
-**LASTNAME:** นามสกุล, สกุล, LNAME, LAST_NAME, FamilyName, encrypted_lastname, PersonLastNameTH
-
-### ตัวอย่าง masking
+## ตัวอย่าง Output
 
 ```
 masking         → ****
-partial_masking → **** แขวงบางบอน เขตบางบอน กรุงเทพฯ 10150
+partial_masking → **** ตำบลบางจาก เขตพระโขนง กรุงเทพ 10260
 ```
 
----
+## การใช้งาน
+
+```python
+from thai_column_classifier import SensitiveColumnClassifier, SensitiveColumnInput
+
+# ค่าเริ่มต้น: semantic = LocalSemanticProvider (paraphrase-multilingual-MiniLM-L12-v2)
+#              llm     = OllamaProvider (llama3.2)
+clf = SensitiveColumnClassifier()
+
+result = clf.classify(SensitiveColumnInput(
+    column_name="ชื่อ-นามสกุล",
+    sample_values=["สมชาย ใจดี"],
+))
+
+print(result.decision)        # masking
+print(result.sensitive_type)  # FULLNAME
+print(result.confidence)      # 1.0
+```
 
 ## Detection Pipeline
-
-ทุก column ผ่าน pipeline นี้ตามลำดับ หยุดทันทีที่ stage ใด stage หนึ่งตัดสินได้
 
 ```
 column_name + sample_values
@@ -82,12 +56,10 @@ column_name + sample_values
 └─────────────────────────┘
         ↓ ไม่เจอ
 ┌─────────────────────────┐
-│  Stage 2: Fuzzy Match   │
-│  - ratio                │ → ถ้าเกิน threshold: return
-│  - partial ratio        │
-│    (name > term เท่านั้น)│
-│  - token sort ratio     │
-│    (English)            │
+│  Stage 2: Fuzzy Match   │ → ถ้าเกิน threshold และชนะขาด: return
+│  - ratio                │
+│  - partial_ratio        │
+│  - token_sort_ratio     │
 └─────────────────────────┘
         ↓ ไม่เจอ
 ┌─────────────────────────┐
@@ -106,123 +78,37 @@ column_name + sample_values
 
 | Stage | Pros | Cons |
 |---|---|---|
-| Exact | เร็วที่สุด O(1), แม่นยำ 100% | ไม่รองรับ typo, alias ต้องครอบคลุมพอ |
+| Exact | เร็วที่สุด, แม่นยำ 100% | ไม่รองรับ typo |
 | Fuzzy | รองรับ typo, ไม่ต้องโหลด model | อาจ false positive ถ้า threshold ต่ำเกิน |
-| Semantic | เข้าใจความหมาย ข้ามภาษาได้ | ต้องโหลด model (~500MB), ช้ากว่า fuzzy |
-| LLM | จับ edge case ได้ดี ใช้ sample values ประกอบ | ช้าที่สุด, ต้องรัน Ollama local, ผลไม่ consistent |
+| Semantic | เข้าใจความหมาย ข้ามภาษาได้ | ต้องโหลด model (~500MB) |
+| LLM | จับ edge case ได้ดี ใช้ sample values ประกอบ | ช้าที่สุด, ต้องรัน Ollama local |
 
-### Stage 2: Fuzzy — การตัดสิน Clear Winner
-
-Fuzzy stage คำนวณ score ของทุก category แล้วตรวจว่า "winner ชนะขาดพอไหม" ก่อน return  
-ถ้าไม่ชัดเจนพอ → ส่งต่อ Stage 3 (Semantic) แทน
+## LLM Providers
 
 ```python
-fuzzy_clear_winner = (
-    runner_up_score < fuzzy_threshold   # อันดับ 2 ไม่ถึง threshold
-    or abs(best_score - runner_up_score) > 5  # หรือห่างกันมากกว่า 5 คะแนน
-)
+from thai_column_classifier import OllamaProvider, OpenAIProvider, ClaudeProvider, HFLLMProvider
+
+# Ollama — fully local, recommended
+OllamaProvider(model="llama3.2")
+
+# OpenAI
+OpenAIProvider(api_key="sk-...")
+
+# Claude
+ClaudeProvider(api_key="...")
+
+# HuggingFace
+HFLLMProvider(api_key="hf_...")
 ```
 
-**กรณีที่ 1 — Clear Winner ✅ (return ทันที)**
+## Semantic Providers
 
-column: `"ที่อยู่อาศัย"`
+```python
+from thai_column_classifier import LocalSemanticProvider, HFSemanticProvider
 
-| Category | Score |
-|---|---|
-| ADDRESS_FULL | **96** ← best |
-| ADDRESS_SHORT | 71 ← runner-up |
+# Local — no API key needed (~500MB download on first use)
+LocalSemanticProvider()
 
+# HuggingFace API — no local model needed
+HFSemanticProvider(api_key="hf_...")
 ```
-gap = 96 - 71 = 25  →  > 5 ✅
-fuzzy_clear_winner = True  →  return ADDRESS_FULL (partial_masking)
-```
-
----
-
-**กรณีที่ 2 — Ambiguous ❌ (ส่งต่อ Semantic/LLM)**
-
-column: `"ที่อยู่บ้านเลขที่"` (มีทั้ง "ที่อยู่" และ "บ้านเลขที่" ในชื่อเดียว)
-
-| Category | Score |
-|---|---|
-| ADDRESS_FULL | **94** ← best |
-| ADDRESS_SHORT | **91** ← runner-up |
-
-```
-runner_up = 91  →  ≥ 92? ❌
-gap = 94 - 91 = 3  →  > 5? ❌
-
-fuzzy_clear_winner = False  →  ส่งต่อ Semantic แทน
-```
-
----
-
-**กรณีที่ 3 — Runner-up ผ่าน threshold แต่ gap แคบ ❌ (ส่งต่อ Semantic/LLM)**
-
-column: `"full home address"`
-
-| Category | Score |
-|---|---|
-| ADDRESS_FULL | **97** ← best |
-| ADDRESS_SHORT | **93** ← runner-up |
-
-```
-runner_up = 93  →  ≥ 92 ✅ (ผ่าน threshold!)
-gap = 97 - 93 = 4  →  > 5? ❌
-
-fuzzy_clear_winner = False  →  ส่งต่อ Semantic แทน
-```
-
----
-
-**สรุป logic:**
-
-```
-fuzzy_clear_winner = True  เมื่อ...
-
-  เงื่อนไข A: runner_up < 92     → อันดับ 2 ไม่ถึง threshold เลย
-              (อันดับ 1 ชนะขาด ไม่มีคู่แข่ง)
-  OR
-  เงื่อนไข B: gap > 5 คะแนน     → ห่างกันพอที่จะมั่นใจได้
-              (อันดับ 1 ชนะแบบห่างชัดเจน)
-```
-
----
-
-## แผนการ Implement
-
-```
-Phase 1: ชื่อ + อีเมล
-  → alias ชัดเจน ทดสอบได้เร็ว
-
-Phase 2: ที่อยู่สั้น
-  → classify ตาม column name + ตัดสิน masking/pass ตามระดับ
-
-Phase 3: ที่อยู่ยาว
-  → ต้องการ address parser (เริ่มด้วย keyword boundary)
-
-Phase 4: โซเชียลมีเดีย
-  → พึ่ง Semantic + LLM เป็นหลัก ทดสอบ false positive rate
-```
-
----
-
-## การติดตั้ง
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## การรัน
-
-```bash
-python main.py
-```
-
-
-## เพิ่มเติม 
-- ควรจะมี sample data ที่ให้ LLM ไปดูตรงนี้แทน ป้องกันการ leak data ส่งไปให้ cloud ai โดย API
-- ตรง category ของ prefix พวก PREFIX ,คำนำหน้าชื่อ
-,คำนำหน้าคำนำหน้านามคำนำหน้าชื่อ, prefixtitletitle_id, name ,title → masking (****)
