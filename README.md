@@ -65,25 +65,61 @@ pip install thai-column-classifier[all]        # everything
 
 ## Quick start
 
+### Classify a single column
+
 ```python
-from thai_column_classifier import IDColumnClassifier, IDColumnInput
-from thai_column_classifier import SensitiveColumnClassifier, SensitiveColumnInput, OllamaProvider
+from thai_column_classifier import ThaiColumnClassifier, OllamaProvider
 
-# CID detector
-cid_clf = IDColumnClassifier()
-result = cid_clf.classify(IDColumnInput(
-    column_name="เลขบัตรประชาชน",
-    sample_values=["1101700203451"]
-))
+clf = ThaiColumnClassifier(llm_provider=OllamaProvider(model="llama3.2"))
+
+result = clf.classify("เลขบัตรประชาชน", samples=["1101700203451"])
 print(result.decision)  # auto_hash
+print(result.type)      # CID
+```
 
-# Sensitive column detector — fully local by default (LocalSemanticProvider + OllamaProvider)
-sensitive_clf = SensitiveColumnClassifier()
-result = sensitive_clf.classify(SensitiveColumnInput(
-    column_name="ชื่อ-นามสกุล",
-    sample_values=["สมชาย ใจดี"]
-))
-print(result.decision)  # masking
+### Load a file and classify all columns
+
+```python
+import pandas as pd
+from thai_column_classifier import ThaiColumnClassifier, OllamaProvider
+
+clf = ThaiColumnClassifier(llm_provider=OllamaProvider(model="llama3.2"))
+
+# Load CSV
+df = pd.read_csv("your_data.csv", encoding="utf-8-sig", dtype=str)
+
+# Load Excel
+# df = pd.read_excel("your_data.xlsx", dtype=str)
+
+results = clf.classify_dataframe(df)
+
+for col_name, result in results.items():
+    print(f"{col_name}: decision={result.decision}, type={result.type}")
+```
+
+### Using the built-in `load_file()` helper (CSV and Excel)
+
+```python
+import os
+import pandas as pd
+from thai_column_classifier import ThaiColumnClassifier, OllamaProvider
+
+def load_file(path: str) -> pd.DataFrame:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".csv":
+        return pd.read_csv(path, encoding="utf-8-sig", dtype=str, on_bad_lines="skip", engine="python")
+    elif ext in (".xlsx", ".xls"):
+        return pd.read_excel(path, dtype=str)
+    else:
+        raise ValueError(f"Unsupported file format: {ext}")
+
+clf = ThaiColumnClassifier(llm_provider=OllamaProvider(model="llama3.2"))
+
+df = load_file("data/my_data.csv")
+results = clf.classify_dataframe(df)
+
+for col_name, result in results.items():
+    print(f"{col_name:<30} decision={result.decision:<15} type={result.type}")
 ```
 
 ## Environment variables
